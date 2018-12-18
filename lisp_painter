@@ -1,0 +1,166 @@
+(define (make-vect x y)
+  (list x y)
+)
+(define (xcor-vect v)
+  (car v)
+)
+
+(define (ycor-vect v)
+  (cadr v)
+)
+
+
+(define (add-vect v f)
+  (make-vect 
+    (+ (xcor-vect v)  (xcor-vect f))
+    (+ (ycor-vect v)  (ycor-vect f))
+  )
+)
+
+(define (sub-vect v f)
+  (make-vect 
+    (- (xcor-vect v)  (xcor-vect f))
+    (- (ycor-vect v)  (ycor-vect f))
+  )
+)
+(define (scale-vect v s)
+  (make-vect 
+    (* (xcor-vect v) s)
+    (* (ycor-vect v) s)
+  )
+)
+
+
+(define (make-frame origin edge1 edge2)
+  (list origin edge1 edge2)
+)
+(define (make-frame2 origin edge1 edge2)
+  (cons origin (cons edge1 edge2))
+)
+
+(define (origin-oposite f)
+  (point 
+    (+ (point-x (edge1 f)) (- (point-x (edge2 f)) (point-x (origin f))))  
+    (+ (point-y (edge2 f)) (- (point-y (edge1 f)) (point-y (origin f))))  
+  )
+)
+
+(define (edge2 f)
+  (caddr f)
+)
+
+(define (edge1 f)
+  (cadr f)
+)
+
+(define (origin f)
+  (car f)
+)
+
+(define (origin2 f)
+  (car f)
+)
+
+(define (edge21 f)
+  (cadr f)
+)
+
+(define (edge22 f)
+  (cddr f)
+)
+
+(define (point x y)
+  (list x  y)
+)
+
+(define (point-x p)
+  (car p)
+)
+
+(define (point-y p)
+  (cadr p)
+)
+
+(define (make-segment p1 p2)
+  (list (make-vect (point 0 0) p1) (make-vect (point 0 0) p2))
+)
+
+(define (start-segment p)
+ (cadar p)
+) 
+(define (end-segment p)
+ (cadadr p)
+) 
+
+(define (mid-point p1 p2)
+  (let ( (x0 (point-x p1)) (y0 (point-y p1)) (x1 (point-x p2)) (y1 (point-y p2)) )
+     (point (abs (/ (+ x1 x0) 2)) (abs (/ (+ y1 y0) 2)))
+  )
+)
+
+(define x (point 1 0))
+(define y (point 0 1))
+(define s (make-segment x y))
+
+(define (draw-line x y)
+  (display "[")
+  (display x)
+  (display ";")
+  (display y)
+  (display "]")
+  (newline)
+)
+
+(define (frame-coord-map frame)
+  (lambda (input)
+    input
+  )
+)
+
+(define (segments->painter segment-list)
+  (lambda (frame)
+    (for-each 
+      (lambda (segment)
+        (draw-line
+          ((frame-coord-map frame) (start-segment segment))
+          ((frame-coord-map frame) (end-segment segment))
+        )
+      )
+      segment-list
+    )
+  )
+)
+
+(define (paint-frame frame)
+  (let ( (x0 (origin frame)) (x1 (edge1 frame))  (x2 (origin-oposite frame)) (x3 (edge2 frame)) )
+    (segments->painter 
+      (list (make-segment x0 x1) (make-segment x1 x2) (make-segment x2 x3) (make-segment x3 x0)) 
+    )
+  )
+)
+
+(define (paint-x-frame frame)
+  (let ( (x0 (origin frame)) (x1 (edge1 frame))  (x2 (origin-oposite frame)) (x3 (edge2 frame)) )
+    (segments->painter 
+      (list (make-segment x0 x2) (make-segment x1 x3) ) 
+    )
+  )
+)
+
+(define (paint-mid-frame frame)
+  (let ( (x0 (origin frame)) (x1 (edge1 frame))  (x2 (origin-oposite frame)) (x3 (edge2 frame)) )
+    (segments->painter 
+      (list (make-segment (mid-point x0 x1) (mid-point x1 x2)) (make-segment (mid-point x1 x2) (mid-point x2 x3)) (make-segment (mid-point x2 x3) (mid-point x3 x0)) (make-segment (mid-point x3 x0) (mid-point x0 x1))) 
+    )
+  )
+)
+
+(define (transform-painter painter origin corner1 corner2)
+  (lambda (frame)
+  (let ((m (frame-coord-map frame)))
+  (let ((new-origin (m origin)))
+  (painter
+  (make-frame new-origin
+  (sub-vect (m corner1) new-origin)
+  (sub-vect (m corner2) new-origin))))))
+)
