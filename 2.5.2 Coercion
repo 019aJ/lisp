@@ -33,7 +33,7 @@
 				(apply proc (map contents args))
 				(if (= (length args) 2)
 					(let ((type1 (car type-tags)) (type2 (cadr type-tags)) (a1 (car args)) (a2 (cadr args)))
-                                          (if (= type1 type2)
+                                          (if (eq? type1 type2)
                                               (apply-generic op a1 a2)
 						(let ((t1->t2 (get-coercion type1 type2)) (t2->t1 (get-coercion type2 type1)))
 							(cond 
@@ -235,3 +235,92 @@
 ;и так работает
 ;в. Измените apply-generic так, чтобы она не пыталась применить приведение, если у обоих
 ;аргументов один и тот же тип.
+
+;Упражнение 2.82.
+;Покажите, как обобщить apply-generic так, чтобы она обрабатывала приведение в общем
+;случае с несколькими аргументами. Один из способов состоит в том, чтобы попытаться сначала
+;привести все аргументы к типу первого, потом к типу второго, и так далее. Приведите пример,
+;когда эта стратегия (а также двухаргументная версия, описанная выше) недостаточно обща. (Подсказка: рассмотрите случай, когда в таблице есть какие-то подходящие операции со смешанными
+;типами, но обращения к ним не произойдет.)
+
+(define (apply-generic-3 op . args)
+  (define (cast-inner list-args list-type-tags new-args cast-type)
+    (cond (
+      (null? list-args) new-args)
+      (else
+       (let ((current-type (car list-type-tags)) (current-value (car list-args)) (coercion (get-coercion (car list-type-tags) cast-type)))
+        (cond
+          ((eq? current-type cast-type) (cast-inner (cdr list-args) (cdr list-type-tags) (append new-args (list current-value)) cast-type))
+          (coercion (cast-inner (cdr list-args) (cdr list-type-tags) (append new-args  (list(coercion current-value))) cast-type))
+          (else #f)
+         )
+        )
+       )
+     )
+   )
+  (define (find-first-cast type-tags args tail-types)
+    (if (null? tail-types)
+        ;все перебрали, не нашли рабочее приведение
+        #f
+        (let ((coerces-args (cast-inner args type-tags '() (car tail-types))))
+          (if coerces-args
+              ;приведение прошло успешно, возвращаем приведенные аргумены
+              coerces-args
+              ;не получилось - проверяем следующий тип
+              (find-first-cast type-tags args (cdr tail-types))
+           )
+         )
+     )
+   )
+  (define (apply-op-to-many  op  proc args)
+    (if proc
+        (let ((res (apply proc (map contents (list (car args) (cadr args))))))
+          (if (= (length args) 2)
+              res
+              (apply-op-to-many  op proc (append (list res) (cddr args)) )
+              )
+          )
+        (error "Нет метода для этих типов" (list op args))
+        )
+    )
+
+ (let ((type-tags (map type-tag args)))
+  (cond
+    ((= (length args) 2)
+     (let ((proc (get op type-tags)))
+       (if proc (apply proc (map contents args))
+           (let ((type1 (car type-tags)) (type2 (cadr type-tags)) (a1 (car args)) (a2 (cadr args)))
+             (if (eq? type1 type2) (apply-generic op a1 a2)
+                 (let ((t1->t2 (get-coercion type1 type2)) (t2->t1 (get-coercion type2 type1)))
+                   (cond 
+                     (t1->t2 (apply-generic-3 op (t1->t2 a1) a2))
+                     (t2->t1 (apply-generic-3 op a1 (t2->t1 a2)))
+                     (else (error "Нет метода для этих типов" (list op type-tags)))
+                     )
+                   )
+                 )
+             )				
+           )
+       )
+     )
+     ((= (length args) 1)
+      (let ((proc (get op type-tags)))
+       (if proc (apply proc (map contents args))  (error "Нет метода для этих типов" (list op type-tags)))
+       ))
+     (else
+       ;приводим все к одному типу
+        (let ((coerced-values (find-first-cast type-tags args type-tags)))
+             (if coerced-values
+		(let ((type-tags (map type-tag coerced-values)))
+                  (let ((proc (get op (list (car type-tags) (cadr type-tags)))))
+                   ( apply-op-to-many op proc coerced-values)
+                  ))
+		(error "Нет метода для этих типов"(list op type-tags))
+              )
+	)
+      )
+   )
+ )
+)
+
+(apply-generic-3 'add  1 2 (make-complex-from-real-imag 1 3)(make-complex-from-real-imag 5 2) )
