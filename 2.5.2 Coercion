@@ -127,6 +127,7 @@
   (put 'make 'scheme-number  (lambda (x) (tag x)))
   (put 'exp '(scheme-number scheme-number) (lambda (x y) (tag (expt x y))))
   (put 'raise '(scheme-number) (lambda (x) (make-rational x 1)))
+  (put 'project '(scheme-number) (lambda (x) #f))
   'done
 )
 
@@ -154,6 +155,7 @@
   (put 'equ? '(rational rational)  (lambda (x y) (and (= (numer x) (numer y )) (= (denom x) (denom y )))))
   (put 'zero? '(rational) (lambda (x)  (and (= (numer x) 0) (= (denom x) 1))))
   (put 'raise '(rational) (lambda (x) (make-complex-from-real-imag (tag x) 0)))
+  (put 'project '(rational) (lambda (x) (if (= (denom x) 1) (numer x) #f)))
   'done
 )
 
@@ -186,6 +188,7 @@
   (put 'angle '(complex) (lambda (z)(angle z)))
   (put 'equ? '(complex complex)  (lambda (x y) (and (= (real-part x) (real-part y )) (= (imag-part x) (imag-part y )))))
   (put 'zero? '(complex)  (lambda (x)  (and (= (real-part x) 0) (= (imag-part x) 0))))
+  (put 'project '(complex)  (lambda (x)  (if (= (imag-part x) 0) (real-part x) #f)))
   'done
 )
 ;Обобщенные арифметические процедуры определяются следующим образом:
@@ -201,6 +204,7 @@
 (define (make-complex-from-real-imag x y)((get 'make-from-real-imag 'complex) x y))
 (define (make-complex-from-mag-ang r a)((get 'make-from-mag-ang 'complex) r a))
 (define (raise x) (apply-generic 'raise x))
+(define (project x) (apply-generic 'project x))
 ;Приведение типов
 (define (scheme-number->complex n)(make-complex-from-real-imag (contents n) 0))
 (put-coercion 'scheme-number 'complex scheme-number->complex)
@@ -405,8 +409,60 @@
 (define x2 (make-rational 1 1))
 (define x3 (make-rational 3 2))
 (define x4 (make-complex-from-real-imag 1 1))
-(define x5 (make-complex-from-real-imag 2 2))
-(apply-generic-level-up 'add x1 x4)
-(apply-generic-level-up 'add x1 x2 x4)
-(apply-generic-many-args 'add x1 x2 x4)
+(define x5 (make-complex-from-real-imag 5 0))
+(define x6 (make-complex-from-real-imag (make-rational 1 1) 0))
+(define x7 (make-complex-from-real-imag (make-rational 1 2) 0))
+(apply-generic-level-up 'add x1 x2 x3 x4)
+(apply-generic-many-args 'add x1 x2 x3 x4)
 
+;Упражнение 2.85.
+;В этом разделе упоминался метод «упрощения» объекта данных путем спуска его по башне насколько возможно вниз. Разработайте процедуру drop, которая делает это для башни, описанной
+;в упражнении 2.83. Ключ к задаче состоит в том, что надо решить некоторым общим способом,
+;можно ли понизить объект в типе. Например, комплексное число 1.5+0i можно опустить до real,
+;комплексное число 1 + 0i до integer, а комплексное число 2 + 3i никуда понизить нельзя. Вот
+;план того, как определить, можно ли понизить объект: для начала определите обобщенную операцию project, которая «сталкивает» объект вниз по башне. Например, проекция комплексного
+;числа будет состоять в отбрасывании его мнимой части. Тогда число можно сдвинуть вниз в том
+;случае, если, спроецировав его, а затем подняв обратно до исходного типа, мы получаем нечто,
+;равное исходному числу. Покажите как реализовать эту идею в деталях, написав процедуру drop,
+;которая опускает объект как можно ниже. Потребуется разработать различные операции проекции53 и установить project в системе в качестве обобщенной операции. Вам также потребуется
+;обобщенный предикат равенства, подобный описанному в упражнении 2.79. Наконец, используя
+;drop, перепишите apply-generic из упражнения 2.84, чтобы она «упрощала» свои результаты.
+
+(define (drop x)
+  (let ((projected (project x)))
+    (if projected
+		(drop projected)
+		x
+	)
+  )
+)
+(display "Процедура drop")
+(newline)
+(display x1)
+(display " -> ")
+(display(drop x1))
+(newline)
+(display x2)
+(display " -> ")
+(display(drop x2))
+(newline)
+(display x3)
+(display " -> ")
+(display(drop x3))
+(newline)
+(display x4)
+(display " -> ")
+(display(drop x4))
+(newline)
+(display x5)
+(display " -> ")
+(display(drop x5))
+(newline)
+(display x6)
+(display " -> ")
+(display(drop x6))
+(newline)
+(display x7)
+(display " -> ")
+(display(drop x7))
+(newline)
