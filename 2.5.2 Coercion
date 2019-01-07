@@ -27,28 +27,28 @@
    )
  )
 (define (apply-generic op . args)
-	(let ((type-tags (map type-tag args)))
-		(let ((proc (get op type-tags)))
-			(if proc
-				(apply proc (map contents args))
-				(if (= (length args) 2)
-					(let ((type1 (car type-tags)) (type2 (cadr type-tags)) (a1 (car args)) (a2 (cadr args)))
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+        (apply proc (map contents args))
+        (if (= (length args) 2)
+          (let ((type1 (car type-tags)) (type2 (cadr type-tags)) (a1 (car args)) (a2 (cadr args)))
                                           (if (eq? type1 type2)
                                               (apply-generic op a1 a2)
-						(let ((t1->t2 (get-coercion type1 type2)) (t2->t1 (get-coercion type2 type1)))
-							(cond 
-								(t1->t2 (apply-generic op (t1->t2 a1) a2))
-								(t2->t1 (apply-generic op a1 (t2->t1 a2)))
-								(else (error "Нет метода для этих типов" (list op type-tags)))
-							)
-						)
+            (let ((t1->t2 (get-coercion type1 type2)) (t2->t1 (get-coercion type2 type1)))
+              (cond 
+                (t1->t2 (apply-generic op (t1->t2 a1) a2))
+                (t2->t1 (apply-generic op a1 (t2->t1 a2)))
+                (else (error "Нет метода для этих типов" (list op type-tags)))
+              )
+            )
                                            )
-					)
-					(error "Нет метода для этих типов"(list op type-tags))
-				)
-			)
-		)
-	)
+          )
+          (error "Нет метода для этих типов"(list op type-tags))
+        )
+      )
+    )
+  )
 )
 
 (define (square a)(* a a))
@@ -126,6 +126,7 @@
   (put 'zero? '(scheme-number)  (lambda (x) (= x 0)))
   (put 'make 'scheme-number  (lambda (x) (tag x)))
   (put 'exp '(scheme-number scheme-number) (lambda (x y) (tag (expt x y))))
+  (put 'raise '(scheme-number) (lambda (x) (make-rational x 1)))
   'done
 )
 
@@ -152,6 +153,7 @@
   (put 'make 'rational (lambda (n d) (tag (make-rat n d))))
   (put 'equ? '(rational rational)  (lambda (x y) (and (= (numer x) (numer y )) (= (denom x) (denom y )))))
   (put 'zero? '(rational) (lambda (x)  (and (= (numer x) 0) (= (denom x) 1))))
+  (put 'raise '(rational) (lambda (x) (make-complex-from-real-imag (tag x) 0)))
   'done
 )
 
@@ -166,10 +168,10 @@
   (define (angle z) (apply-generic 'angle z))
   (define (magnitude z) (apply-generic 'magnitude z))
   ; внутренние процедуры
-  (define (add-complex z1 z2) (make-from-real-imag (+ (real-part z1) (real-part z2)) (+ (imag-part z1) (imag-part z2))))
-  (define (sub-complex z1 z2) (make-from-real-imag (- (real-part z1) (real-part z2)) (- (imag-part z1) (imag-part z2))))
-  (define (mul-complex z1 z2) (make-from-mag-ang (* (magnitude z1) (magnitude z2)) (+ (angle z1) (angle z2))))
-  (define (div-complex z1 z2) (make-from-mag-ang (/ (magnitude z1) (magnitude z2)) (- (angle z1) (angle z2))))
+  (define (add-complex z1 z2) (make-from-real-imag (add (real-part z1) (real-part z2)) (add (imag-part z1) (imag-part z2))))
+  (define (sub-complex z1 z2) (make-from-real-imag (sub (real-part z1) (real-part z2)) (sub (imag-part z1) (imag-part z2))))
+  (define (mul-complex z1 z2) (make-from-mag-ang (mul (magnitude z1) (magnitude z2)) (add (angle z1) (angle z2))))
+  (define (div-complex z1 z2) (make-from-mag-ang (div (magnitude z1) (magnitude z2)) (sub (angle z1) (angle z2))))
   ; интерфейс к остальной системе
   (define (tag z) (attach-tag 'complex z))
   (put 'add '(complex complex) (lambda (z1 z2) (tag (add-complex z1 z2))))
@@ -198,18 +200,30 @@
 (define (make-scheme-number n)((get 'make 'scheme-number) n))
 (define (make-complex-from-real-imag x y)((get 'make-from-real-imag 'complex) x y))
 (define (make-complex-from-mag-ang r a)((get 'make-from-mag-ang 'complex) r a))
-
+(define (raise x) (apply-generic 'raise x))
 ;Приведение типов
 (define (scheme-number->complex n)(make-complex-from-real-imag (contents n) 0))
 (put-coercion 'scheme-number 'complex scheme-number->complex)
 (define (scheme-number->rational n)(make-rational (contents n) 1))
 (put-coercion 'scheme-number 'rational scheme-number->rational)
-
+(define (rational->complex n)(make-complex-from-real-imag n 0))
+(put-coercion 'rational 'complex rational->complex)
 (install-polar-package)
 (install-rectangular-package)
 (install-scheme-number-package)
 (install-rational-package)
 (install-complex-package)
+
+(define (apply-op-to-many  op  proc args)
+  (if proc
+    (let ((res (apply proc (map contents (list (car args) (cadr args))))))
+      (if (= (length args) 2)
+           res
+          (apply-op-to-many  op proc (append (list res) (cddr args))))
+     )
+    (error "Нет метода для этих типов" (list op args))
+  )
+)
 
 
 ;Упражнение 2.81.
@@ -243,7 +257,7 @@
 ;когда эта стратегия (а также двухаргументная версия, описанная выше) недостаточно обща. (Подсказка: рассмотрите случай, когда в таблице есть какие-то подходящие операции со смешанными
 ;типами, но обращения к ним не произойдет.)
 
-(define (apply-generic-3 op . args)
+(define (apply-generic-many-args op . args)
   (define (cast-inner list-args list-type-tags new-args cast-type)
     (cond (
       (null? list-args) new-args)
@@ -272,17 +286,6 @@
          )
      )
    )
-  (define (apply-op-to-many  op  proc args)
-    (if proc
-        (let ((res (apply proc (map contents (list (car args) (cadr args))))))
-          (if (= (length args) 2)
-              res
-              (apply-op-to-many  op proc (append (list res) (cddr args)) )
-              )
-          )
-        (error "Нет метода для этих типов" (list op args))
-        )
-    )
 
  (let ((type-tags (map type-tag args)))
   (cond
@@ -293,13 +296,13 @@
              (if (eq? type1 type2) (apply-generic op a1 a2)
                  (let ((t1->t2 (get-coercion type1 type2)) (t2->t1 (get-coercion type2 type1)))
                    (cond 
-                     (t1->t2 (apply-generic-3 op (t1->t2 a1) a2))
-                     (t2->t1 (apply-generic-3 op a1 (t2->t1 a2)))
+                     (t1->t2 (apply-generic-many-args op (t1->t2 a1) a2))
+                     (t2->t1 (apply-generic-many-args op a1 (t2->t1 a2)))
                      (else (error "Нет метода для этих типов" (list op type-tags)))
                      )
                    )
                  )
-             )				
+             )        
            )
        )
      )
@@ -311,16 +314,99 @@
        ;приводим все к одному типу
         (let ((coerced-values (find-first-cast type-tags args type-tags)))
              (if coerced-values
-		(let ((type-tags (map type-tag coerced-values)))
+                 (let ((type-tags (map type-tag coerced-values)))
                   (let ((proc (get op (list (car type-tags) (cadr type-tags)))))
                    ( apply-op-to-many op proc coerced-values)
                   ))
-		(error "Нет метода для этих типов"(list op type-tags))
+                 (error "Нет метода для этих типов"(list op type-tags))
               )
-		)
+    )
       )
    )
  )
 )
 
-(apply-generic-3 'add  1 2 (make-complex-from-real-imag 1 3)(make-complex-from-real-imag 5 2) )
+(apply-generic-many-args 'add  1 2 (make-complex-from-real-imag 1 3)(make-complex-from-real-imag 5 2) )
+
+;Упражнение 2.83.
+;Предположим, что Вы разрабатываете обобщенную арифметическую систему для работы с башней
+;типов, показанной на рис. 2.25: целые, рациональные, действительные, комплексные. Для каждого
+;из типов (кроме комплексного), разработайте процедуру, поднимающую объект на один уровень
+;в башне. Покажите, как ввести обобщенную операцию raise, которая будет работать для всех
+;типов (кроме комплексных чисел)
+(raise 1)
+(raise (make-rational 1 1))
+
+;Упражнение 2.84.
+;Используя операцию raise из упражнения 2.83, измените процедуру apply-generic так, чтобы она приводила аргументы к одному типу путем последовательного подъема, как описано в
+;этом разделе. Потребуется придумать способ проверки, какой из двух типов выше по башне. Сделайте это способом, «совместимым» с остальной системой, так, чтобы не возникало проблем при
+;добавлении к башне новых типов.
+
+ (define (level type) 
+   (cond ((eq? type 'scheme-number) 0) 
+         ((eq? type 'rational) 1) 
+         ((eq? type 'complex) 2) 
+         (else (error "Invalid type: LEVEL" type)))) 
+     
+(define (apply-generic-level-up op . args)
+
+  (define (find-max-level type-tags current-max)
+    (if 
+      (null? type-tags) current-max
+      (let ((current-type-level (level (car type-tags))))
+        (if (> current-type-level current-max) 
+          (find-max-level (cdr type-tags) current-type-level)
+          (find-max-level (cdr type-tags) current-max)
+        )
+      )
+    )
+  )
+  
+  (define (cast-value value cast-type)
+    (let ((current-type-level (level (car (map type-tag (list value))))))
+       (if (< current-type-level cast-type) 
+         (cast-value (raise value) cast-type)
+         value
+       )
+    )
+  )  
+  (define (cast-all list-args new-args cast-type)
+    (if (null? list-args) 
+      new-args
+      (cast-all (cdr list-args) (append new-args (list (cast-value (car list-args) cast-type))) cast-type)
+     )
+  )
+
+
+
+ (let ((type-tags (map type-tag args)))
+  (cond
+    ((= (length args) 1)
+     (let ((proc (get op type-tags)))
+       (if proc 
+         (apply proc (map contents args))
+         (error "Нет метода для этих типов" (list op type-tags)))
+     )
+    )
+    (else
+       ;ищем тип для приведения
+      (let ((coerced-values (cast-all args '() (find-max-level type-tags 0))))
+        (let ((type-tags (map type-tag coerced-values)))
+           (let ((proc (get op (list (car type-tags) (cadr type-tags)))))
+             (apply-op-to-many op proc coerced-values)
+           )
+	)
+      )
+    )
+   )
+ )
+)
+(define x1 3)
+(define x2 (make-rational 1 1))
+(define x3 (make-rational 3 2))
+(define x4 (make-complex-from-real-imag 1 1))
+(define x5 (make-complex-from-real-imag 2 2))
+(apply-generic-level-up 'add x1 x4)
+(apply-generic-level-up 'add x1 x2 x4)
+(apply-generic-many-args 'add x1 x2 x4)
+
