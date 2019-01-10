@@ -259,4 +259,3 @@
 (display "cos(1.5) = ") (cos-generic x3)
 (display "sin(1.5) = ") (sin-generic x3)
 
-(provide (all-defined-out))

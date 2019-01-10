@@ -213,6 +213,6 @@
 (define (zero? x) (apply-generic 'zero? x))
 (define (exp x y) (apply-generic 'exp x y))
 
-
-(install-scheme-number-package)
 (install-polynomial-package)
+
+(provide (all-defined-out))
