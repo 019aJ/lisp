@@ -8,18 +8,36 @@
 
 ; представление термов и списков термов
  (define (adjoin-term term term-list)
-  (if (zero? (coeff term))
-   term-list
-   (cons (coeff term) term-list)
+  (define (find-place upward-list below-list)
+   (let ((input-order (order term)) (input-coef (coeff term)) (current-order (max-order below-list)))
+    (if (= input-order current-order)
+     (append upward-list (cons (+ input-coef (car below-list)) (cdr below-list)))
+     (find-place (append upward-list (list (car below-list))) (cdr  below-list))
+    )
+   )
+  )
+  (let ((input-order (order term)) (input-coef (coeff term)) (term-list-length (length term-list))) 
+   (cond
+    ((zero? (coeff term)) term-list)
+    ((= input-order term-list-length) (cons (coeff term) term-list))
+    ;Добить нулями
+    ((> input-order term-list-length) (adjoin-term term (cons 0 term-list)))
+    ;Найти место для коэфицента и добавить
+    (else (find-place '() term-list))
+   )
   )
  )
+
+
  (define (the-empty-termlist) '())
- (define (first-term term-list) (make-term (- (length term-list) 1)(car term-list) ))
+ (define (max-order term-list) (- (length term-list) 1))
+ (define (first-term term-list) (make-term (max-order term-list)(car term-list)))
  (define (rest-terms term-list) (cdr term-list))
  (define (empty-termlist? term-list) (null? term-list))
  (define (make-term order coeff) (list order coeff))
  (define (order term) (car term))
  (define (coeff term) (cadr term))
+
  (define (sign-term L)
   (cond 
    ((empty-termlist? L) L)
@@ -46,6 +64,7 @@
    )
   )
  )
+
  (define (mul-terms L1 L2)
   (if (empty-termlist? L1)
    (the-empty-termlist)
@@ -71,3 +90,10 @@
    )
  )
 )
+
+(define t2 (adjoin-term (make-term 2 2) (the-empty-termlist)))
+(define t3 (adjoin-term (make-term 3 3) (the-empty-termlist)))
+
+(display "2x^2 + 3x^3 = ")(display (add-terms t2 t3)) (newline)
+(display "2x^2 * 3x^3 = ")(display (mul-terms t2 t3)) (newline)
+(display "2 * (x^4 + + 2x^3 - 5x^2 +3x + 7) = ")(display (add-terms t1 t1)) (newline)
