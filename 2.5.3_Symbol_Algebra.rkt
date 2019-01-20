@@ -38,9 +38,24 @@
  
  ; представление термов и списков термов
  (define (adjoin-term term term-list)
-  (if (zero? (coeff term))
-   term-list
-   (cons term term-list)
+  (define (find-place upward-list below-list)
+   (if (empty-termlist? below-list)
+    (append upward-list (list term))
+    (let ((input-order (order term)) (input-coef (coeff term)) (current-order (order (first-term term-list))) (current-coef (coeff (first-term term-list))))
+     (cond
+      ((= input-order current-order) (append upward-list (cons (make-term current-order (+ input-coef current-coef)) (cdr below-list))))
+      ((> input-order current-order) (append upward-list (cons term (cdr below-list))))
+      (else (find-place (append upward-list (list (car below-list))) (cdr  below-list)))
+     )
+    )
+   )
+  )
+  (let ((term-order (order term)) (list-order (order (first-term term-list))) ) 
+   (cond
+    ((zero? (coeff term)) term-list)
+    ((> term-order list-order ) (cons term term-list))
+    (else (find-place '() term-list))
+   )
   )
  )
  (define (the-empty-termlist) '())
