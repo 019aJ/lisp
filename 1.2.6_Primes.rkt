@@ -239,3 +239,4 @@
 (display "2465: ")(display (miller-rabin-prime? 2465 500))(newline)
 (display "2821: ")(display (miller-rabin-prime? 2821 500))(newline)
 (display "6601: ")(display (miller-rabin-prime? 6601 500))(newline)
+(provide (all-defined-out))
