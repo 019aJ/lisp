@@ -99,7 +99,7 @@
   ; интерфейс к остальной системе
 
   (define (tag x) (attach-tag 'sparse x))
-  (put 'the-empty-termlist '(sparse) the-empty-termlist)
+  (put 'the-empty-termlist 'sparse (tag (the-empty-termlist)))
   (put 'max-order '(sparse) max-order)
   (put 'first-term '(sparse) first-term)
   (put 'rest-terms '(sparse) rest-terms )
@@ -111,5 +111,9 @@
   (put 'make-from-dense-list 'sparse (lambda (x) (tag(make-sparse-termlist x))))
   (put 'make-from-sparse-list 'sparse (lambda (x) (tag(make-sparse-termlist x))))
 )
+
+(define (make-from-sparse-list l) ((get 'make-from-sparse-list 'sparse) l) )
+(define (the-empty-termlist) (get 'the-empty-termlist 'sparse))
+
 (install-sparse-polynomial-package)
 (provide (all-defined-out))

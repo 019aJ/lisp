@@ -90,7 +90,7 @@
   ; интерфейс к остальной системе
 
   (define (tag x) (attach-tag 'dense x))
-  (put 'the-empty-termlist '(dense) the-empty-termlist)
+  (put 'the-empty-termlist 'dense (tag (the-empty-termlist)))
   (put 'max-order '(dense) max-order)
   (put 'first-term '(dense) first-term)
   (put 'rest-terms '(dense) rest-terms)
