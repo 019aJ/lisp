@@ -21,7 +21,9 @@
 ;и списка термов остатка.
 ;Закончите следующее определение div-terms, вставив недостающие выражения. Используйте ее, чтобы реализовать div-poly, которая получает в виде аргументов два экземпляра poly, а
 ;выдает список из poly–частного и poly–остатка.
+
 (define (div-terms L1 L2)
+  (display L1)(display " / ") (display L2) (newline)(newline)
   (if (empty-termlist? L1)
       (list (the-empty-termlist) (the-empty-termlist))
       (let ((t1 (first-term L1))
@@ -29,12 +31,28 @@
         (if (> (order t2) (order t1))
             (list (the-empty-termlist) L1)
             (let ((new-c (div (coeff t1) (coeff t2)))
-                  (new-o (- (order t1) (order t2))))
+                  (new-o (- (order t1) (order t2))))             
               (let ((rest-of-result
                      ;рекурсивно вычислить оставшуюся часть результата
-                     (div-terms ( - L1 (mul-terms (make-from-sparse-list (list (list new-o new-c))) L2)) L2)
+                     (div-terms (add-terms L1 (sign-term (mul-terms (make-from-sparse-list (list (make-term new-o new-c)))  L2))) L2)
                      ))
                 ;сформировать окончательный результат
-                ()
+                (display "rest-of-result ")
+                (display rest-of-result)
+                (newline)
+                (list (add-terms (car rest-of-result) (make-from-sparse-list (list (make-term new-o new-c)))) (cdr rest-of-result))
                 )))))
 )
+(define sp-term-source
+  (list (make-term 3 1)
+        (make-term   2 3)
+        (make-term   1 -2)
+        (make-term   0 1)))
+(define L1 (make-from-sparse-list sp-term-source))
+
+(define sp-term-source-2
+  (list (make-term   2 1)
+        (make-term   0 3)))
+(define L2 (make-from-sparse-list sp-term-source-2))
+(the-empty-termlist)
+(div-terms L1 L2)

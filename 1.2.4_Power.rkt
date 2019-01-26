@@ -118,3 +118,4 @@
  )
  (fib-iter 1 0 0 1 n)
 )
+(provide (all-defined-out))
