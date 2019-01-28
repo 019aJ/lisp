@@ -180,3 +180,5 @@
  (accumulate-filter + 0 prime? square a inc b)
 )
 (display "Сумма квадратов простых чисел от 1 до 10 ")(display(sum-prime-squares 1 10))(newline)
+
+(provide (all-defined-out))
