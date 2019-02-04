@@ -47,17 +47,94 @@
 ;segment, которая принимает отрезок в качестве аргумента и возвращает его середину (точку,
 ;координаты которой являются средним координат концов отрезка). Чтобы опробовать эти проце-
 ;дуры, Вам потребуется способ печатать координаты точек:
+
+(define (make-segment start end)
+  (cons start end)
+)
+
+(define (start-segment segment)
+  (car segment)
+)
+
+(define (end-segment segment)
+  (cdr segment)
+)
+
+(define (make-point x y)
+  (cons x y)
+)
+
+(define (x-point p)
+  (car p)
+)
+
+(define (y-point p)
+  (cdr p)
+)
+
+(define (midpoint-segment segment)
+  (let ((start (start-segment segment)) (end (end-segment segment)))
+    (make-point (/ (+ (x-point start) (x-point end)) 2) (/ (+ (y-point start) (y-point end)) 2))
+  )
+)
+
 (define (print-point p)
-(newline)
-(display "(")
-(display (x-point p))
-(display ",")
-(display (y-point p))
-(display ")"))
+  (newline)
+  (display "(")
+  (display (x-point p))
+  (display ",")
+  (display (y-point p))
+  (display ")")
+)
+
+(define st (make-point 1 3))
+(define fn (make-point 3 5))
+(define sgmnt (make-segment st fn))
+(print-point (midpoint-segment sgmnt))
+
 ;Упражнение2.3.
-;Реализуйте представление прямоугольников на плоскости. (Подсказка: Вам могут потребоваться
-;результаты упражнения 2.2.) Определите в терминах своих конструкторов и селекторов процедуры,
+;Реализуйте представление прямоугольников на плоскости. Определите в терминах своих конструкторов и селекторов процедуры,
 ;которые вычисляют периметр и площадь прямоугольника. Теперь реализуйте другое представление
 ;для прямоугольников. Можете ли Вы спроектировать свою систему с подходящими барьерами
 ;абстракции так, чтобы одни и те же процедуры вычисления периметра и площади работали с
 ;любым из Ваших представлений?
+
+(define (make-poly-1 p1 p3)
+  (list p1 (make-point (x-point p3) (y-point p1)) p3 (make-point (x-point p1) (y-point p3)))
+)
+
+(define (make-poly-2 p1 height width)
+  (list p1 (make-point (x-point p1) ( + height (y-point p1)))(make-point ( + (x-point p1) width) ( + height (y-point p1))) (make-point ( + (x-point p1) width)  (y-point p1)))
+)
+
+(define (poly-point p num)
+  (cond
+    ((= num 1) (car p))
+    ((= num 2) (cadr p))
+    ((= num 3) (caddr p))
+    (else (cadddr p))
+  )
+)
+
+(define (poly-height p)
+  (abs (- (y-point (poly-point p 1)) (y-point (poly-point p 3))))
+)
+
+(define (poly-width p)
+  (abs (- (x-point (poly-point p 3)) (x-point (poly-point p 1))))
+)
+
+(define (poly-area p)
+  (* (poly-height p) (poly-width p))
+)
+
+(define (poly-length p)
+  (* 2 (+ (poly-height p) (poly-width p)))
+)
+
+(define poly-1 (make-poly-1 (make-point 1 1) (make-point 3 4)))
+(define poly-2 (make-poly-2 (make-point 1 1) 2 3))
+(poly-area poly-1)
+(poly-area poly-2)
+(poly-length poly-1)
+(poly-length poly-2)
